@@ -1,0 +1,159 @@
+:root {
+  --bg-color: #0f172a;
+  --panel-bg: rgba(30, 41, 59, 0.7);
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  
+  /* Geometry of the Hexagon */
+  --hex-w: 66px;
+  --hex-h: 57.16px; /* 66 * sqrt(3)/2 */
+  
+  /* Text colors for contrast */
+  --txt-dark: #0f172a;
+  --txt-light: #f8fafc;
+}
+
+* { 
+  box-sizing: border-box; 
+  margin: 0; 
+  padding: 0; 
+}
+
+body {
+  background: var(--bg-color);
+  background-image: radial-gradient(circle at 50% 0%, #1e1b4b, #0f172a);
+  color: var(--text-primary);
+  font-family: 'Outfit', sans-serif;
+  height: 100vh;
+  overflow: hidden;
+  user-select: none; /* No selection text during clicks */
+}
+
+.app-container {
+  display: flex; 
+  flex-direction: column; 
+  height: 100%;
+}
+
+.header {
+  text-align: center; 
+  padding: 2rem; 
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  z-index: 10; 
+  backdrop-filter: blur(10px); 
+  background: var(--panel-bg);
+}
+
+.header h1 { 
+  font-size: 2.5rem; 
+  font-weight: 700; 
+  letter-spacing: -1px; 
+  background: linear-gradient(to right, #60a5fa, #a78bfa); 
+  -webkit-background-clip: text; 
+  background-clip: text; /* Propiedad estándar W3C para calmar al linter */
+  color: transparent; 
+}
+
+.header p { 
+  color: var(--text-secondary); 
+  font-weight: 300; 
+}
+
+.keyboard-viewport {
+  flex: 1; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+  overflow: auto;
+  padding: 2rem;
+}
+
+.hex-grid {
+  position: relative; /* Hexagons will be plotted inside it via Absolute pos */
+}
+
+.hex {
+  position: absolute;
+  width: var(--hex-w);
+  height: var(--hex-h);
+  background: rgba(255, 255, 255, 0.1);
+  /* Flat-topped hexagon geometric clip-path */
+  clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+  display: flex; 
+  flex-direction: column; 
+  align-items: center; 
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease, filter 0.2s;
+  box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.1);
+}
+
+.hex:hover {
+  transform: scale(1.08); /* slight inner bloom jump on hover */
+  z-index: 5 !important;
+  filter: brightness(1.15);
+}
+
+.hex.active {
+  transform: scale(0.92);
+  filter: brightness(1.4);
+}
+
+.hex-num { 
+  font-size: 1.4rem; 
+  font-weight: 700; 
+}
+
+.hex-note { 
+  font-size: 0.8rem; 
+  font-weight: 500; 
+  opacity: 0.85; 
+  margin-top: 1px;
+}
+
+.c-amber { 
+  background: #fdba74; 
+  color: #431407; /* Texto bien oscuro para que lea fácil sobre el claro */
+  box-shadow: inset 0 0 8px rgba(255, 255, 255, 0.2);
+}
+
+.c-amber-dark {
+  background: #fb923c; /* Naranja un poco más oscuro y denso */
+  color: #2e1005; 
+  box-shadow: inset 0 0 8px rgba(255, 255, 255, 0.1);
+}
+
+/* ================================
+   MONITOR HUD ESTILOS
+=================================== */
+.monitor {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  background: rgba(15, 23, 42, 0.85); /* Dark slate semi-transparent */
+  border-left: 4px solid #ea580c;
+  padding: 1.5rem;
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  min-width: 280px;
+  z-index: 100;
+  pointer-events: none; /* Let clicks pass through if layout expands */
+}
+
+.monitor h3 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 0.6rem;
+}
+
+.monitor-content {
+  font-family: monospace;
+  font-size: 1.1rem;
+  color: #fbbf24; /* Amber text for output */
+  white-space: pre-wrap;
+}
