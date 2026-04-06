@@ -76,7 +76,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let minX = 0, minY = 0, maxX = 0, maxY = 0;
   let allHexes = [];
   
-  function renderOctave(octaveIndex, visualYOffsetH) {
+  function renderOctave(octaveIndex, xOffsetCols, yOffsetUnits) {
     // Determine the base 41-tet addition for the octave
     const basePitch = octaveIndex * 41;
     
@@ -87,11 +87,10 @@ document.addEventListener("DOMContentLoaded", () => {
       for(let i=0; i<col.notes.length; i++) {
         let visualNum = col.notes[i];
         let mappedId = col.notes[i] + basePitch; // ID único real (0..81) para enrutar el MID/OSC
-        let meta = noteMapping[visualNum];
         
-        let left = c * dx;
-        // visualYOffsetH shifts the entire block UP or DOWN in hex height units
-        let shiftedY = curY + visualYOffsetH; 
+        let left = (c + xOffsetCols) * dx;
+        // yOffsetUnits shifts the entire block UP or DOWN in hex height units
+        let shiftedY = curY + yOffsetUnits; 
         let top = shiftedY * dy;
         
         // Track bounds
@@ -108,18 +107,18 @@ document.addEventListener("DOMContentLoaded", () => {
         hex.dataset.visibleNum = visualNum;
         hex.dataset.mappedId = mappedId;
         
-        let octString = octaveIndex > 0 ? `+${octaveIndex}` : octaveIndex;
-        hex.dataset.mappedName = `${visualNum}_oct${octString}`; // Ej: 0_oct0, 20_oct+1, 40_oct-1
+        let octSuffix = "octC0";
+        if (octaveIndex === 1) octSuffix = "octCa";
+        if (octaveIndex === -1) octSuffix = "octCb";
         
-        // We defer assigning actual top/left pixels until we know absolute bounds
-        // Just store abstract coords for now
+        hex.dataset.mappedName = `${visualNum}_${octSuffix}`;
+        
         allHexes.push({ el: hex, note: mappedId, name: hex.dataset.mappedName, x: left, y: top });
         
         hex.innerHTML = `<span class="hex-num">${visualNum}</span>`;
         
         const monitorEl = document.getElementById("monitor-content");
         
-        // Función centralizada de disparo (Output)
         const triggerNote = () => {
           hex.classList.add('active'); 
           const outMsg = `Key[${visualNum}]\nID: ${mappedId}\nPitch: ${hex.dataset.mappedName}`;
@@ -127,7 +126,6 @@ document.addEventListener("DOMContentLoaded", () => {
           if (monitorEl) monitorEl.textContent = outMsg;
         };
 
-        // Mouse/Touch logic
         hex.addEventListener('mousedown', triggerNote);
         document.addEventListener('mouseup', () => { hex.classList.remove('active'); });
         hex.addEventListener('mouseleave', () => { hex.classList.remove('active'); });
@@ -138,23 +136,26 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         hex.addEventListener('touchend', (e) => { e.preventDefault(); hex.classList.remove('active'); });
         
-        curY += 1.0;
+        let yStep = 1.0;
+        // Optimization: In the reference image, the vertical step within a column is precisely 1.0 units
+        curY += yStep;
       }
     }
   }
 
   // --- RENDERING CALLS ---
-  // Octava Central (Index 0) - positioned at offset 0
-  renderOctave(0, 0);
-  
-  // Octava Aguda (Index +1) - positioned 4.5 blocks UPPER visually
-  renderOctave(1, -4.5);
+  // We use the magic offsets derived from the reference image for perfect tiling
+  // Upper Octave (+1): Shifted 1 column left and 3.5 units up
+  renderOctave(1, -1, -3.5);
 
-  // Octava Grave (Index -1) - positioned 4.5 blocks LOWER visually
-  renderOctave(-1, 4.5);
+  // Lower Octave (-1): Shifted 1 column right and 3.5 units down
+  renderOctave(-1, 1, 3.5);
+
+  // Central Octave (0): Rendered LAST to ensure visual priority and centered labeling
+  renderOctave(0, 0, 0);
 
   // Append all nodes applying absolute shift so negative coordinates don't clip
-  const padding = 20; // 20px padding inside container
+  const padding = 100; // Match CSS padding for safety
   allHexes.forEach(h => {
     h.el.style.left = `${h.x - minX + padding}px`;
     h.el.style.top = `${h.y - minY + padding}px`;

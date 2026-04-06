@@ -29,6 +29,22 @@ body {
   user-select: none; /* No selection text during clicks */
 }
 
+#grid-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100vh;
+  padding: 100px;
+  overflow: visible;
+  background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+}
+
+#hex-grid {
+  position: relative;
+  /* El tamaño se ajusta dinámicamente con JS */
+}
+
 .app-container {
   display: flex; 
   flex-direction: column; 
