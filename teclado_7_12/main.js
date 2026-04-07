@@ -72,9 +72,47 @@ document.addEventListener("DOMContentLoaded", () => {
   // Paso vertical en Y = Height entero
   const dy = H + Gap;
 
+  // Offset para normalizar IDs (mínimo -164 + 174 = 10)
+  const KEY_ID_OFFSET = 174;
+
   // Limits for bounding container
   let minX = 0, minY = 0, maxX = 0, maxY = 0;
   let allHexes = [];
+
+  // Gestión de polifonía y monitor
+  const activeNotes = new Map();
+  const eventLog = [];
+  const MAX_LOG_ENTRIES = 10;
+  const monitorEl = document.getElementById("monitor-content");
+
+  const addEventLog = (msg) => {
+    eventLog.push(msg);
+    if (eventLog.length > MAX_LOG_ENTRIES) eventLog.shift();
+    updateMonitor();
+  };
+
+  const updateMonitor = () => {
+    if (eventLog.length === 0) {
+      if (monitorEl) monitorEl.textContent = "Esperando MIDI/OSC...";
+      return;
+    }
+    if (monitorEl) monitorEl.textContent = eventLog.join("\n");
+  };
+
+  const handleNoteOn = (id, visualNum, name, el) => {
+    if (activeNotes.has(id)) return;
+    el.classList.add('active');
+    activeNotes.set(id, { visualNum, name });
+    addEventLog(`[ON]  Key[${visualNum}] | ID: ${id} | ${name}`);
+  };
+
+  const handleNoteOff = (id, el) => {
+    if (!activeNotes.has(id)) return;
+    const note = activeNotes.get(id);
+    addEventLog(`[OFF] Key[${note.visualNum}] | ID: ${id} | ${note.name}`);
+    el.classList.remove('active');
+    activeNotes.delete(id);
+  };
   
   function renderOctave(octaveIndex, xOffsetCols, yOffsetUnits, colorBase, bankSuffix) {
     const basePitch = octaveIndex * 41;
@@ -85,7 +123,7 @@ document.addEventListener("DOMContentLoaded", () => {
       
       for(let i=0; i<col.notes.length; i++) {
         let visualNum = col.notes[i];
-        let mappedId = col.notes[i] + basePitch;
+        let mappedId = col.notes[i] + basePitch + KEY_ID_OFFSET;
         
         let left = (c + xOffsetCols) * dx;
         let shiftedY = curY + yOffsetUnits; 
@@ -118,18 +156,24 @@ document.addEventListener("DOMContentLoaded", () => {
         allHexes.push({ el: hex, note: mappedId, name: hex.dataset.mappedName, x: left, y: top });
         hex.innerHTML = `<span class="hex-num">${visualNum}</span>`;
         
-        const monitorEl = document.getElementById("monitor-content");
-        const triggerNote = () => {
-          hex.classList.add('active'); 
-          const outMsg = `Key[${visualNum}]\nID: ${mappedId}\nPitch: ${hex.dataset.mappedName}`;
-          if (monitorEl) monitorEl.textContent = outMsg;
-        };
-
-        hex.addEventListener('mousedown', triggerNote);
-        document.addEventListener('mouseup', () => hex.classList.remove('active'));
-        hex.addEventListener('mouseleave', () => hex.classList.remove('active'));
-        hex.addEventListener('touchstart', (e) => { e.preventDefault(); triggerNote(); });
-        hex.addEventListener('touchend', (e) => { e.preventDefault(); hex.classList.remove('active'); });
+        // Mouse Events
+        hex.addEventListener('mousedown', () => handleNoteOn(mappedId, visualNum, hex.dataset.mappedName, hex));
+        hex.addEventListener('mouseup', () => handleNoteOff(mappedId, hex));
+        hex.addEventListener('mouseleave', () => handleNoteOff(mappedId, hex));
+        
+        // Touch Events (Polifonía real en tablets/pantallas táctiles)
+        hex.addEventListener('touchstart', (e) => { 
+          e.preventDefault(); 
+          handleNoteOn(mappedId, visualNum, hex.dataset.mappedName, hex); 
+        });
+        hex.addEventListener('touchend', (e) => { 
+          e.preventDefault(); 
+          handleNoteOff(mappedId, hex); 
+        });
+        hex.addEventListener('touchcancel', (e) => { 
+          e.preventDefault(); 
+          handleNoteOff(mappedId, hex); 
+        });
         
         curY += 1.0;
       }
