@@ -65,7 +65,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Flat Topped Math Geometry settings
   const W = 66; // variable en CSS (--hex-w)
   const H = 57.16; // variable en CSS (--hex-h)
-  const Gap = 3;
+  const Gap = 1;
   
   // Paso horizontal en X (Distancia entre centros a los lados) = 3/4 * W
   const dx = (W * 0.75) + Gap; 
@@ -76,8 +76,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let minX = 0, minY = 0, maxX = 0, maxY = 0;
   let allHexes = [];
   
-  function renderOctave(octaveIndex, xOffsetCols, yOffsetUnits) {
-    // Determine the base 41-tet addition for the octave
+  function renderOctave(octaveIndex, xOffsetCols, yOffsetUnits, colorBase, bankSuffix) {
     const basePitch = octaveIndex * 41;
     
     for(let c = 0; c < layout7_12.length; c++) {
@@ -86,83 +85,88 @@ document.addEventListener("DOMContentLoaded", () => {
       
       for(let i=0; i<col.notes.length; i++) {
         let visualNum = col.notes[i];
-        let mappedId = col.notes[i] + basePitch; // ID único real (0..81) para enrutar el MID/OSC
+        let mappedId = col.notes[i] + basePitch;
         
         let left = (c + xOffsetCols) * dx;
-        // yOffsetUnits shifts the entire block UP or DOWN in hex height units
         let shiftedY = curY + yOffsetUnits; 
         let top = shiftedY * dy;
         
-        // Track bounds
         if (left < minX) minX = left;
         if (top < minY) minY = top;
         if (left > maxX) maxX = left;
         if (top > maxY) maxY = top;
         
         let hex = document.createElement("div");
-        const isCenter = (octaveIndex === 0);
-        hex.className = `hex ${isCenter ? 'c-amber' : 'c-amber-dark'}`;
+        const isCenter = (octaveIndex % 3 === 0 || octaveIndex === 0 || octaveIndex === -3); 
+        // Logic: Middle octave of each bank is brighter
+        // For Bank 0: 0 is center. For Bank -1: -3 is center.
         
-        // Dataset names for mapping engine routing
+        // Manual check for central octave of the bank
+        const isBankCenter = (octaveIndex === 0 || octaveIndex === -3 || octaveIndex === 3);
+        hex.className = `hex ${isBankCenter ? colorBase : colorBase + '-dark'}`;
+        
         hex.dataset.visibleNum = visualNum;
         hex.dataset.mappedId = mappedId;
         
-        let octSuffix = "octC0";
-        if (octaveIndex === 1) octSuffix = "octCa";
-        if (octaveIndex === -1) octSuffix = "octCb";
+        // Define suffix: Cc, Ca, Cb
+        let type = "Cc";
+        if ([1, -2, 4].includes(octaveIndex)) type = "Ca";
+        if ([-1, -4, 2].includes(octaveIndex)) type = "Cb";
         
-        hex.dataset.mappedName = `${visualNum}_${octSuffix}`;
+        hex.dataset.mappedName = `${visualNum}_oct${type}${bankSuffix}`;
         
         allHexes.push({ el: hex, note: mappedId, name: hex.dataset.mappedName, x: left, y: top });
-        
         hex.innerHTML = `<span class="hex-num">${visualNum}</span>`;
         
         const monitorEl = document.getElementById("monitor-content");
-        
         const triggerNote = () => {
           hex.classList.add('active'); 
           const outMsg = `Key[${visualNum}]\nID: ${mappedId}\nPitch: ${hex.dataset.mappedName}`;
-          console.log(`MIDI OUT -> ${outMsg.replace(/\n/g, ' | ')}`);
           if (monitorEl) monitorEl.textContent = outMsg;
         };
 
         hex.addEventListener('mousedown', triggerNote);
-        document.addEventListener('mouseup', () => { hex.classList.remove('active'); });
-        hex.addEventListener('mouseleave', () => { hex.classList.remove('active'); });
-
-        hex.addEventListener('touchstart', (e) => { 
-          e.preventDefault(); 
-          triggerNote(); 
-        });
+        document.addEventListener('mouseup', () => hex.classList.remove('active'));
+        hex.addEventListener('mouseleave', () => hex.classList.remove('active'));
+        hex.addEventListener('touchstart', (e) => { e.preventDefault(); triggerNote(); });
         hex.addEventListener('touchend', (e) => { e.preventDefault(); hex.classList.remove('active'); });
         
-        let yStep = 1.0;
-        // Optimization: In the reference image, the vertical step within a column is precisely 1.0 units
-        curY += yStep;
+        curY += 1.0;
       }
     }
   }
 
+  function renderBank(bankSuffix, xBase, yBase, colorBase, octIndices) {
+    // Upper
+    renderOctave(octIndices[0], xBase - 1, yBase - 3.5, colorBase, bankSuffix);
+    // Lower
+    renderOctave(octIndices[1], xBase + 1, yBase + 3.5, colorBase, bankSuffix);
+    // Central (Rendered last for priority)
+    renderOctave(octIndices[2], xBase, yBase, colorBase, bankSuffix);
+  }
+
   // --- RENDERING CALLS ---
-  // We use the magic offsets derived from the reference image for perfect tiling
-  // Upper Octave (+1): Shifted 1 column left and 3.5 units up
-  renderOctave(1, -1, -3.5);
+  
+  // Bloque Grave (Izquierda, Verde)
+  // Shift horizontal de -12 para que compartan la cuadrícula y se acoplen (interlocking).
+  // Shift vertical de -1.0 para que la nota 40 (col 12, y=3) quede justo debajo de la 
+  // nota 0 del bloque naranja (col 0, y=1). 3.0 - 1.0 = 2.0. Perfect fit.
+  renderBank("-1", -12, -1.0, "c-green", [-2, -4, -3]);
 
-  // Lower Octave (-1): Shifted 1 column right and 3.5 units down
-  renderOctave(-1, 1, 3.5);
+  // Bloque Central (Centro, Naranja) 
+  renderBank("", 0, 0, "c-amber", [1, -1, 0]);
+  
+  // Bloque Agudo (Derecha, Celeste)
+  renderBank("+1", 12, 1.0, "c-sky", [4, 2, 3]);
 
-  // Central Octave (0): Rendered LAST to ensure visual priority and centered labeling
-  renderOctave(0, 0, 0);
-
-  // Append all nodes applying absolute shift so negative coordinates don't clip
-  const padding = 100; // Match CSS padding for safety
+  // FINAL RENDER
+  const padding = 100;
   allHexes.forEach(h => {
     h.el.style.left = `${h.x - minX + padding}px`;
     h.el.style.top = `${h.y - minY + padding}px`;
     gridContainer.appendChild(h.el);
   });
 
-  // Adjust container size explicitly
   let totalW = (maxX - minX) + W + (padding * 2);
   let totalH = (maxY - minY) + H + (padding * 2);
   gridContainer.style.width = `${totalW}px`;
