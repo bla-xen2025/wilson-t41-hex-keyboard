@@ -13,6 +13,26 @@
       <h1>Wilson T41-TET</h1>
       <p>Microtonal 7-12 Honeycomb Keyboard</p>
     </header>
+
+    <div id="global-controls" class="glass-panel controls-panel">
+      <div class="control-section">
+        <span class="control-label">OCTAVA</span>
+        <div class="octave-controls">
+          <button id="oct-down" class="btn-ctrl">-</button>
+          <div id="oct-display" class="oct-display">0</div>
+          <button id="oct-up" class="btn-ctrl">+</button>
+        </div>
+      </div>
+      <div class="control-divider"></div>
+      <div class="control-section">
+        <span class="control-label">PÁNICO</span>
+        <div class="panic-controls">
+          <button id="panic-notes" class="btn-ctrl btn-panic">NOTES OFF</button>
+          <button id="panic-sound" class="btn-ctrl btn-panic">SOUND OFF</button>
+        </div>
+      </div>
+    </div>
+
     <main class="keyboard-viewport">
       <div id="hex-grid" class="hex-grid"></div>
     </main>

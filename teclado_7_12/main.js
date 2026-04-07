@@ -1,48 +1,5 @@
-const noteMapping = [
-  {name: 'C', color: 'c-white'}, // 0
-  {name: 'C+', color: 'c-blue'}, // 1
-  {name: 'C#-', color: 'c-green'}, // 2
-  {name: 'C#', color: 'c-gray'}, // 3
-  {name: 'Db', color: 'c-gray'}, // 4
-  {name: 'Db+', color: 'c-green'}, // 5
-  {name: 'D-', color: 'c-blue'}, // 6
-  {name: 'D', color: 'c-white'}, // 7
-  {name: 'D+', color: 'c-blue'}, // 8
-  {name: 'D#-', color: 'c-green'}, // 9
-  {name: 'D#', color: 'c-gray'}, // 10
-  {name: 'Eb', color: 'c-gray'}, // 11
-  {name: 'Eb+', color: 'c-green'}, // 12
-  {name: 'E-', color: 'c-blue'}, // 13
-  {name: 'E', color: 'c-white'}, // 14
-  {name: 'E+', color: 'c-blue'}, // 15
-  {name: 'F-', color: 'c-blue'}, // 16
-  {name: 'F', color: 'c-white'}, // 17
-  {name: 'F+', color: 'c-blue'}, // 18
-  {name: 'F#-', color: 'c-green'}, // 19
-  {name: 'F#', color: 'c-gray'}, // 20
-  {name: 'Gb', color: 'c-gray'}, // 21
-  {name: 'Gb+', color: 'c-green'}, // 22
-  {name: 'G-', color: 'c-blue'}, // 23
-  {name: 'G', color: 'c-white'}, // 24
-  {name: 'G+', color: 'c-blue'}, // 25
-  {name: 'G#-', color: 'c-green'}, // 26
-  {name: 'G#', color: 'c-gray'}, // 27
-  {name: 'Ab', color: 'c-gray'}, // 28
-  {name: 'Ab+', color: 'c-green'}, // 29
-  {name: 'A-', color: 'c-blue'}, // 30
-  {name: 'A', color: 'c-white'}, // 31
-  {name: 'A+', color: 'c-blue'}, // 32
-  {name: 'A#-', color: 'c-green'}, // 33
-  {name: 'A#', color: 'c-gray'}, // 34
-  {name: 'Bb', color: 'c-gray'}, // 35
-  {name: 'Bb+', color: 'c-green'}, // 36
-  {name: 'B-', color: 'c-blue'}, // 37
-  {name: 'B', color: 'c-white'}, // 38
-  {name: 'B+', color: 'c-blue'}, // 39
-  {name: 'C-', color: 'c-blue'}  // 40
-];
-
 // Layout definition precisely as read from image
+// Note: Each number in 'notes' represents the relative pitch (0-40) within the octave.
 const layout7_12 = [
   { yStart: 0, notes: [1, 0] },
   { yStart: -0.5, notes: [5, 4, 3, 2] },
@@ -59,6 +16,22 @@ const layout7_12 = [
   { yStart: 3.0, notes: [40] }
 ];
 
+// OSC Control Constants
+const transpositionArray = [
+  ["/param/a/octave", -3],
+  ["/param/a/octave", -2],
+  ["/param/a/octave", -1],
+  ["/param/a/octave", 0],
+  ["/param/a/octave", 1],
+  ["/param/a/octave", 2],
+  ["/param/a/octave", 3]
+];
+
+const panicCommands = [
+  "/allnotesoff",
+  "/allsoundoff"
+];
+
 document.addEventListener("DOMContentLoaded", () => {
   const gridContainer = document.getElementById("hex-grid");
 
@@ -72,7 +45,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Paso vertical en Y = Height entero
   const dy = H + Gap;
 
-  // Offset para normalizar IDs (mínimo -164 + 174 = 10)
+  // Offset para normalizar IDs (mínimo -164 + 174 = 10 en trans 0)
   const KEY_ID_OFFSET = 174;
 
   // Limits for bounding container
@@ -99,19 +72,56 @@ document.addEventListener("DOMContentLoaded", () => {
     if (monitorEl) monitorEl.textContent = eventLog.join("\n");
   };
 
-  const handleNoteOn = (id, visualNum, name, el) => {
-    if (activeNotes.has(id)) return;
-    el.classList.add('active');
-    activeNotes.set(id, { visualNum, name });
-    addEventLog(`[ON]  Key[${visualNum}] | ID: ${id} | ${name}`);
+  // --- Lógica de Controles Globales (OSC) ---
+  let currentOctaveIdx = 3; // Valor 0 por defecto
+  let currentOctaveValue = 0; // Valor escalar real (-3 a 3)
+
+  const updateOctave = (delta) => {
+    const newIdx = currentOctaveIdx + delta;
+    if (newIdx >= 0 && newIdx < transpositionArray.length) {
+      currentOctaveIdx = newIdx;
+      const [addr, val] = transpositionArray[currentOctaveIdx];
+      currentOctaveValue = val;
+      const displayEl = document.getElementById("oct-display");
+      if (displayEl) displayEl.textContent = val > 0 ? `+${val}` : val;
+      addEventLog(`["${addr}", ${val}]`);
+    }
   };
 
-  const handleNoteOff = (id, el) => {
-    if (!activeNotes.has(id)) return;
-    const note = activeNotes.get(id);
-    addEventLog(`[OFF] Key[${note.visualNum}] | ID: ${id} | ${note.name}`);
+  const sendPanic = (cmd) => {
+    addEventLog(`"${cmd}"`);
+  };
+
+  // Bind Control Events
+  document.getElementById("oct-down")?.addEventListener("click", () => updateOctave(-1));
+  document.getElementById("oct-up")?.addEventListener("click", () => updateOctave(1));
+  document.getElementById("panic-notes")?.addEventListener("click", () => sendPanic(panicCommands[0]));
+  document.getElementById("panic-sound")?.addEventListener("click", () => sendPanic(panicCommands[1]));
+  
+  const handleNoteOn = (baseId, visualNum, name, el) => {
+    // Calculamos el ID Real sumando el offset global
+    const realId = baseId + (currentOctaveValue * 41);
+    
+    if (activeNotes.has(realId)) return;
+    el.classList.add('active');
+    
+    // Guardamos el realId en el elemento para que NoteOff apague el correcto
+    el.dataset.activeId = realId;
+    
+    activeNotes.set(realId, { visualNum, name });
+    addEventLog(`["/mnote", ${realId}, 127]`);
+  };
+
+  const handleNoteOff = (el) => {
+    const activeId = parseInt(el.dataset.activeId);
+    if (isNaN(activeId) || !activeNotes.has(activeId)) return;
+    
+    const note = activeNotes.get(activeId);
+    addEventLog(`["/mnote", ${activeId}, 0]`);
     el.classList.remove('active');
-    activeNotes.delete(id);
+    
+    activeNotes.delete(activeId);
+    delete el.dataset.activeId;
   };
   
   function renderOctave(octaveIndex, xOffsetCols, yOffsetUnits, colorBase, bankSuffix) {
@@ -135,7 +145,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (top > maxY) maxY = top;
         
         let hex = document.createElement("div");
-        const isCenter = (octaveIndex % 3 === 0 || octaveIndex === 0 || octaveIndex === -3); 
         // Logic: Middle octave of each bank is brighter
         // For Bank 0: 0 is center. For Bank -1: -3 is center.
         
@@ -144,7 +153,7 @@ document.addEventListener("DOMContentLoaded", () => {
         hex.className = `hex ${isBankCenter ? colorBase : colorBase + '-dark'}`;
         
         hex.dataset.visibleNum = visualNum;
-        hex.dataset.mappedId = mappedId;
+        hex.dataset.baseId = mappedId;
         
         // Define suffix: Cc, Ca, Cb
         let type = "Cc";
@@ -158,8 +167,8 @@ document.addEventListener("DOMContentLoaded", () => {
         
         // Mouse Events
         hex.addEventListener('mousedown', () => handleNoteOn(mappedId, visualNum, hex.dataset.mappedName, hex));
-        hex.addEventListener('mouseup', () => handleNoteOff(mappedId, hex));
-        hex.addEventListener('mouseleave', () => handleNoteOff(mappedId, hex));
+        hex.addEventListener('mouseup', () => handleNoteOff(hex));
+        hex.addEventListener('mouseleave', () => handleNoteOff(hex));
         
         // Touch Events (Polifonía real en tablets/pantallas táctiles)
         hex.addEventListener('touchstart', (e) => { 
@@ -168,11 +177,11 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         hex.addEventListener('touchend', (e) => { 
           e.preventDefault(); 
-          handleNoteOff(mappedId, hex); 
+          handleNoteOff(hex); 
         });
         hex.addEventListener('touchcancel', (e) => { 
           e.preventDefault(); 
-          handleNoteOff(mappedId, hex); 
+          handleNoteOff(hex); 
         });
         
         curY += 1.0;
