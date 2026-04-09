@@ -48,12 +48,12 @@ document.addEventListener("DOMContentLoaded", () => {
   // Offset para normalizar IDs (mínimo -164 + 174 = 10 en trans 0)
   const KEY_ID_OFFSET = 174;
 
-  // Limits for bounding container
-  let minX = 0, minY = 0, maxX = 0, maxY = 0;
+  // Limits for bounding container: Usamos Infinito para asegurar asignaciones iniciales correctas
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   let allHexes = [];
 
   // Gestión de polifonía y monitor
-  const activeNotes = new Map();
+  const activeNotes = new Set();
   const eventLog = [];
   const MAX_LOG_ENTRIES = 10;
   const monitorEl = document.getElementById("monitor-content");
@@ -98,7 +98,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("panic-notes")?.addEventListener("click", () => sendPanic(panicCommands[0]));
   document.getElementById("panic-sound")?.addEventListener("click", () => sendPanic(panicCommands[1]));
   
-  const handleNoteOn = (baseId, visualNum, name, el) => {
+  const handleNoteOn = (baseId, el) => {
     // Calculamos el ID Real sumando el offset global
     const realId = baseId + (currentOctaveValue * 41);
     
@@ -108,7 +108,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Guardamos el realId en el elemento para que NoteOff apague el correcto
     el.dataset.activeId = realId;
     
-    activeNotes.set(realId, { visualNum, name });
+    activeNotes.add(realId);
     addEventLog(`["/mnote", ${realId}, 127]`);
   };
 
@@ -116,7 +116,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const activeId = parseInt(el.dataset.activeId);
     if (isNaN(activeId) || !activeNotes.has(activeId)) return;
     
-    const note = activeNotes.get(activeId);
     addEventLog(`["/mnote", ${activeId}, 0]`);
     el.classList.remove('active');
     
@@ -124,19 +123,14 @@ document.addEventListener("DOMContentLoaded", () => {
     delete el.dataset.activeId;
   };
   
-  function renderOctave(octaveIndex, xOffsetCols, yOffsetUnits, colorBase, bankSuffix) {
-    // Forzamos el rango de IDs según el bloque (desacoplado de la posición visual):
-    // - bloque verde ("c-green") emite siempre notas de 10 a 50 (índice -4).
-    // - bloque naranja ("c-amber") emite siempre notas de 51 a 91 (índice -3).
-    // - bloque celeste ("c-sky") emite siempre notas de 92 a 132 (índice -2).
-    let effectiveOctaveIndex = octaveIndex;
-    if (colorBase === "c-green") {
-      effectiveOctaveIndex = -4; 
-    } else if (colorBase === "c-amber") {
-      effectiveOctaveIndex = -3;
-    } else if (colorBase === "c-sky") {
-      effectiveOctaveIndex = -2;
-    }
+  function renderOctave(octaveIndex, xOffsetCols, yOffsetUnits, colorBase) {
+    // Forzamos el rango de IDs según el bloque mediante mapa de índices base
+    const colorToBankOffset = {
+      "c-green": -4,
+      "c-amber": -3,
+      "c-sky": -2
+    };
+    const effectiveOctaveIndex = colorToBankOffset[colorBase] ?? octaveIndex;
     const basePitch = effectiveOctaveIndex * 41;
     
     for(let c = 0; c < layout7_12.length; c++) {
@@ -164,28 +158,18 @@ document.addEventListener("DOMContentLoaded", () => {
         const isBankCenter = (octaveIndex === 0 || octaveIndex === -3 || octaveIndex === 3);
         hex.className = `hex ${isBankCenter ? colorBase : colorBase + '-dark'}`;
         
-        hex.dataset.visibleNum = visualNum;
-        hex.dataset.baseId = mappedId;
-        
-        // Define suffix: Cc, Ca, Cb
-        let type = "Cc";
-        if ([1, -2, 4].includes(octaveIndex)) type = "Ca";
-        if ([-1, -4, 2].includes(octaveIndex)) type = "Cb";
-        
-        hex.dataset.mappedName = `${visualNum}_oct${type}${bankSuffix}`;
-        
-        allHexes.push({ el: hex, note: mappedId, name: hex.dataset.mappedName, x: left, y: top });
+        allHexes.push({ el: hex, x: left, y: top });
         hex.innerHTML = `<span class="hex-num">${visualNum}</span>`;
         
         // Mouse Events
-        hex.addEventListener('mousedown', () => handleNoteOn(mappedId, visualNum, hex.dataset.mappedName, hex));
+        hex.addEventListener('mousedown', () => handleNoteOn(mappedId, hex));
         hex.addEventListener('mouseup', () => handleNoteOff(hex));
         hex.addEventListener('mouseleave', () => handleNoteOff(hex));
         
         // Touch Events (Polifonía real en tablets/pantallas táctiles)
         hex.addEventListener('touchstart', (e) => { 
           e.preventDefault(); 
-          handleNoteOn(mappedId, visualNum, hex.dataset.mappedName, hex); 
+          handleNoteOn(mappedId, hex); 
         });
         hex.addEventListener('touchend', (e) => { 
           e.preventDefault(); 
@@ -201,13 +185,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function renderBank(bankSuffix, xBase, yBase, colorBase, octIndices) {
+  function renderBank(xBase, yBase, colorBase, octIndices) {
     // Upper
-    renderOctave(octIndices[0], xBase - 1, yBase - 3.5, colorBase, bankSuffix);
+    renderOctave(octIndices[0], xBase - 1, yBase - 3.5, colorBase);
     // Lower
-    renderOctave(octIndices[1], xBase + 1, yBase + 3.5, colorBase, bankSuffix);
+    renderOctave(octIndices[1], xBase + 1, yBase + 3.5, colorBase);
     // Central (Rendered last for priority)
-    renderOctave(octIndices[2], xBase, yBase, colorBase, bankSuffix);
+    renderOctave(octIndices[2], xBase, yBase, colorBase);
   }
 
   // --- RENDERING CALLS ---
@@ -216,13 +200,13 @@ document.addEventListener("DOMContentLoaded", () => {
   // Shift horizontal de -12 para que compartan la cuadrícula y se acoplen (interlocking).
   // Shift vertical de -1.0 para que la nota 40 (col 12, y=3) quede justo debajo de la 
   // nota 0 del bloque naranja (col 0, y=1). 3.0 - 1.0 = 2.0. Perfect fit.
-  renderBank("-1", -12, -1.0, "c-green", [-2, -4, -3]);
+  renderBank(-12, -1.0, "c-green", [-2, -4, -3]);
 
   // Bloque Central (Centro, Naranja) 
-  renderBank("", 0, 0, "c-amber", [1, -1, 0]);
+  renderBank(0, 0, "c-amber", [1, -1, 0]);
   
   // Bloque Agudo (Derecha, Celeste)
-  renderBank("+1", 12, 1.0, "c-sky", [4, 2, 3]);
+  renderBank(12, 1.0, "c-sky", [4, 2, 3]);
 
   // FINAL RENDER
   const padding = 100;
