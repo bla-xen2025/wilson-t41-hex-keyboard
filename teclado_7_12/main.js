@@ -125,7 +125,19 @@ document.addEventListener("DOMContentLoaded", () => {
   };
   
   function renderOctave(octaveIndex, xOffsetCols, yOffsetUnits, colorBase, bankSuffix) {
-    const basePitch = octaveIndex * 41;
+    // Forzamos el rango de IDs según el bloque (desacoplado de la posición visual):
+    // - bloque verde ("c-green") emite siempre notas de 10 a 50 (índice -4).
+    // - bloque naranja ("c-amber") emite siempre notas de 51 a 91 (índice -3).
+    // - bloque celeste ("c-sky") emite siempre notas de 92 a 132 (índice -2).
+    let effectiveOctaveIndex = octaveIndex;
+    if (colorBase === "c-green") {
+      effectiveOctaveIndex = -4; 
+    } else if (colorBase === "c-amber") {
+      effectiveOctaveIndex = -3;
+    } else if (colorBase === "c-sky") {
+      effectiveOctaveIndex = -2;
+    }
+    const basePitch = effectiveOctaveIndex * 41;
     
     for(let c = 0; c < layout7_12.length; c++) {
       let col = layout7_12[c];

@@ -58,18 +58,13 @@ body {
 }
 
 .header h1 { 
-  font-size: 2.5rem; 
-  font-weight: 700; 
-  letter-spacing: -1px; 
+  font-size: 1.5rem; 
+  font-weight: 600; 
+  letter-spacing: 0; 
   background: linear-gradient(to right, #60a5fa, #a78bfa); 
   -webkit-background-clip: text; 
   background-clip: text; /* Propiedad estándar W3C para calmar al linter */
   color: transparent; 
-}
-
-.header p { 
-  color: var(--text-secondary); 
-  font-weight: 300; 
 }
 
 .keyboard-viewport {
