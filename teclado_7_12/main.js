@@ -122,6 +122,34 @@ document.addEventListener("DOMContentLoaded", () => {
     activeNotes.delete(activeId);
     delete el.dataset.activeId;
   };
+
+  // --- Mapeo de Control QWERTY (Pruebas) ---
+  const qwertyMap = { 'a': 0, 's': 1, 'd': 2, 'f': 3, 'g': 4, 'h': 5, 'j': 6, 'k': 7, 'l': 8 };
+  const pressedKeys = new Set();
+
+  document.addEventListener('keydown', (e) => {
+    if (e.repeat) return; // Evitar disparos repetidos mec\xe1nicos
+    const key = e.key.toLowerCase();
+    if (qwertyMap[key] !== undefined) {
+      const visualNum = qwertyMap[key];
+      const hexEl = document.querySelector(`[data-qwerty-target="${visualNum}"]`);
+      if (hexEl && !pressedKeys.has(key)) {
+        pressedKeys.add(key);
+        // Desencadenamos un Note ON artificial pasando la baseId embutida y el elemento
+        handleNoteOn(parseInt(hexEl.dataset.baseId), hexEl);
+      }
+    }
+  });
+
+  document.addEventListener('keyup', (e) => {
+    const key = e.key.toLowerCase();
+    if (pressedKeys.has(key)) {
+      pressedKeys.delete(key);
+      const visualNum = qwertyMap[key];
+      const hexEl = document.querySelector(`[data-qwerty-target="${visualNum}"]`);
+      if (hexEl) handleNoteOff(hexEl);
+    }
+  });
   
   function renderOctave(octaveIndex, xOffsetCols, yOffsetUnits, colorBase) {
     // Forzamos el rango de IDs según el bloque mediante mapa de índices base
@@ -160,6 +188,12 @@ document.addEventListener("DOMContentLoaded", () => {
         
         allHexes.push({ el: hex, x: left, y: top });
         hex.innerHTML = `<span class="hex-num">${visualNum}</span>`;
+
+        hex.dataset.baseId = mappedId;
+        // Etiquetamos \xfanicamente a las notas 0 al 8 del bloque central naranja para prueba QWERTY
+        if (octaveIndex === 0 && colorBase === "c-amber" && visualNum >= 0 && visualNum <= 8) {
+          hex.dataset.qwertyTarget = visualNum;
+        }
         
         // Mouse Events
         hex.addEventListener('mousedown', () => handleNoteOn(mappedId, hex));
@@ -220,4 +254,19 @@ document.addEventListener("DOMContentLoaded", () => {
   let totalH = (maxY - minY) + H + (padding * 2);
   gridContainer.style.width = `${totalW}px`;
   gridContainer.style.height = `${totalH}px`;
+
+  // === AUTO-CENTRAR BLOQUE NARANJA ===
+  // Esperamos un instante a que el navegador procese el render y tenga medidas correctas:
+  setTimeout(() => {
+    const viewport = document.querySelector('.keyboard-viewport');
+    if (viewport) {
+      // Calculamos d\xf3nde qued\xf3 el centro matem\xe1tico (el x=0, y=0 donde naci\xf3 el naranja)
+      const targetX = -minX + padding + (W / 2);
+      const targetY = -minY + padding + (H / 2);
+      
+      // Scrolleamos para colocar ese centro en el medio del dispositivo visible
+      viewport.scrollLeft = targetX - (viewport.clientWidth / 2);
+      viewport.scrollTop = targetY - (viewport.clientHeight / 2);
+    }
+  }, 100);
 });
