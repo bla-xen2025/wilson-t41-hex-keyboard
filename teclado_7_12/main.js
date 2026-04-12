@@ -134,12 +134,12 @@ document.addEventListener("DOMContentLoaded", () => {
       currentOctaveValue = val;
       const displayEl = document.getElementById("oct-display");
       if (displayEl) displayEl.textContent = val > 0 ? `+${val}` : val;
-      addEventLog(`["${addr}", ${val}]`);
+      addEventLog(`[${addr}, ${val}]`);
     }
   };
 
   const sendPanic = (cmd) => {
-    addEventLog(`"${cmd}"`);
+    addEventLog(`${cmd}`);
   };
 
   // Bind Control Events
@@ -159,14 +159,14 @@ document.addEventListener("DOMContentLoaded", () => {
     el.dataset.activeId = realId;
     
     activeNotes.add(realId);
-    addEventLog(`["/mnote", ${realId}, 127]`);
+    addEventLog(`[/mnote, ${realId.toFixed(1)}, 127]`);
   };
 
   const handleNoteOff = (el) => {
     const activeId = parseInt(el.dataset.activeId);
     if (isNaN(activeId) || !activeNotes.has(activeId)) return;
     
-    addEventLog(`["/mnote", ${activeId}, 0]`);
+    addEventLog(`[/mnote, ${activeId.toFixed(1)}, 0]`);
     el.classList.remove('active');
     
     activeNotes.delete(activeId);
