@@ -289,3 +289,139 @@ body {
   filter: brightness(1.2);
   box-shadow: 0 0 20px rgba(173, 216, 230, 0.7);
 }
+
+/* ================================
+   OSC SETUP STYLES
+=================================== */
+.osc-setup {
+  gap: 1.5rem !important;
+}
+
+.osc-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.osc-minilabel {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 1px;
+}
+
+.osc-input {
+  background: rgba(255, 255, 255, 0.05);
+  border: none;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+  color: #fbbf24;
+  font-family: monospace;
+  font-size: 0.85rem;
+  padding: 4px 0;
+  width: 90px;
+  outline: none;
+  transition: border-color 0.3s ease;
+}
+
+.osc-input:focus {
+  border-bottom-color: #60a5fa;
+}
+
+#osc-port {
+  width: 60px;
+}
+
+.osc-toggle-group {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+/* Custom Toggle Switch */
+.switch-toggle {
+  position: relative;
+  display: inline-block;
+  width: 42px;
+  height: 22px;
+}
+
+.switch-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider-round {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(255, 255, 255, 0.1);
+  transition: .4s;
+  border-radius: 34px;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.slider-round:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+input:checked + .slider-round {
+  background-color: #3b82f6;
+}
+
+input:checked + .slider-round:before {
+  transform: translateX(20px);
+}
+
+/* LED Indicators Layout */
+.led-indicators {
+  display: flex;
+  gap: 1rem;
+}
+
+.led-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.led-label {
+  font-size: 0.5rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 0.5px;
+}
+
+#osc-led-send, #osc-led-link {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.led-red {
+  background-color: #ef4444;
+  box-shadow: 0 0 5px rgba(239, 68, 68, 0.5);
+}
+
+.led-green {
+  background-color: #22c55e;
+  box-shadow: 0 0 10px #22c55e, 0 0 15px rgba(34, 197, 94, 0.3);
+  animation: pulse-led 2s infinite ease-in-out;
+}
+
+@keyframes pulse-led {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.15); }
+  100% { opacity: 1; transform: scale(1); }
+}

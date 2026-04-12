@@ -58,8 +58,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const MAX_LOG_ENTRIES = 10;
   const monitorEl = document.getElementById("monitor-content");
 
-  const addEventLog = (msg) => {
-    eventLog.push(msg);
+  const addEventLog = (msg, isSystem = false) => {
+    let finalMsg = msg;
+    if (!isSystem) {
+      const prefix = oscStatus.enabled ? `[${oscStatus.ip}:${oscStatus.port}]` : `[OFF]`;
+      finalMsg = `${prefix} ${msg}`;
+    }
+    
+    eventLog.push(finalMsg);
     if (eventLog.length > MAX_LOG_ENTRIES) eventLog.shift();
     updateMonitor();
   };
@@ -75,6 +81,50 @@ document.addEventListener("DOMContentLoaded", () => {
   // --- Lógica de Controles Globales (OSC) ---
   let currentOctaveIdx = 3; // Valor 0 por defecto
   let currentOctaveValue = 0; // Valor escalar real (-3 a 3)
+
+  // Estado de configuración OSC
+  const oscStatus = {
+    enabled: false,
+    linked: false,
+    ip: "127.0.0.1",
+    port: 8000
+  };
+
+  const updateStatusVisuals = () => {
+    // LED SEND
+    const ledSend = document.getElementById("osc-led-send");
+    if (ledSend) {
+      ledSend.className = oscStatus.enabled ? "led-green" : "led-red";
+    }
+    
+    // LED LINK
+    const ledLink = document.getElementById("osc-led-link");
+    if (ledLink) {
+      ledLink.className = oscStatus.linked ? "led-green" : "led-red";
+    }
+  };
+
+  // Exponer setter global para que un bridge (WebSocket) pueda actualizar el estado de LINK
+  window.setOscLinked = (state) => {
+    oscStatus.linked = !!state;
+    updateStatusVisuals();
+    addEventLog(oscStatus.linked ? "Vínculo OSC Establecido" : "Vínculo OSC Perdido", true);
+  };
+
+  // Listeners de configuración OSC
+  document.getElementById("osc-ip")?.addEventListener("input", (e) => {
+    oscStatus.ip = e.target.value;
+  });
+
+  document.getElementById("osc-port")?.addEventListener("input", (e) => {
+    oscStatus.port = parseInt(e.target.value) || 0;
+  });
+
+  document.getElementById("osc-toggle")?.addEventListener("change", (e) => {
+    oscStatus.enabled = e.target.checked;
+    updateStatusVisuals();
+    addEventLog(oscStatus.enabled ? "OSC Habilitado" : "OSC Deshabilitado", true);
+  });
 
   const updateOctave = (delta) => {
     const newIdx = currentOctaveIdx + delta;

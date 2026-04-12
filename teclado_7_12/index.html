@@ -30,6 +30,33 @@
           <button id="panic-sound" class="btn-ctrl btn-panic">SOUND OFF</button>
         </div>
       </div>
+      <div class="control-divider"></div>
+      <div class="control-section osc-setup">
+        <div class="osc-input-group">
+          <span class="osc-minilabel">IP</span>
+          <input type="text" id="osc-ip" class="osc-input" value="127.0.0.1" spellcheck="false">
+        </div>
+        <div class="osc-input-group">
+          <span class="osc-minilabel">PORT</span>
+          <input type="number" id="osc-port" class="osc-input" value="8000">
+        </div>
+        <div class="osc-toggle-group">
+          <label class="switch-toggle">
+            <input type="checkbox" id="osc-toggle">
+            <span class="slider-round"></span>
+          </label>
+          <div class="led-indicators">
+            <div class="led-item">
+              <div id="osc-led-send" class="led-red"></div>
+              <span class="led-label">SEND</span>
+            </div>
+            <div class="led-item">
+              <div id="osc-led-link" class="led-red"></div>
+              <span class="led-label">LINK</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <main class="keyboard-viewport">
@@ -38,7 +65,7 @@
     
     <!-- Monitor de Salida UI -->
     <div id="output-monitor" class="glass-panel monitor">
-      <h3>Salida a MAX/MSP</h3>
+      <h3>Salida OSC</h3>
       <div id="monitor-content" class="monitor-content">Esperando MIDI/OSC...</div>
     </div>
   </div>
