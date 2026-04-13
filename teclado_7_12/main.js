@@ -78,48 +78,134 @@ document.addEventListener("DOMContentLoaded", () => {
     if (monitorEl) monitorEl.textContent = eventLog.join("\n");
   };
 
-  // --- Lógica de Controles Globales (OSC) ---
-  let currentOctaveIdx = 3; // Valor 0 por defecto
-  let currentOctaveValue = 0; // Valor escalar real (-3 a 3)
+  // --- Lógica de Codificación Binaria OSC 1.0 ---
+  class OSCMessage {
+    constructor(address, types, args) {
+      this.address = address;
+      this.types = "," + types;
+      this.args = args;
+    }
 
-  // Estado de configuración OSC
+    encode() {
+      const addrBuf = this.stringToBuffer(this.address);
+      const typesBuf = this.stringToBuffer(this.types);
+      const argsBuf = this.argsToBuffer();
+
+      const totalSize = addrBuf.length + typesBuf.length + argsBuf.length;
+      const buffer = new Uint8Array(totalSize);
+      buffer.set(addrBuf, 0);
+      buffer.set(typesBuf, addrBuf.length);
+      buffer.set(argsBuf, addrBuf.length + typesBuf.length);
+      return buffer.buffer;
+    }
+
+    stringToBuffer(str) {
+      const content = new TextEncoder().encode(str);
+      const len = content.length + 1; // null terminator
+      const paddedLen = Math.ceil(len / 4) * 4;
+      const buffer = new Uint8Array(paddedLen);
+      buffer.set(content);
+      return buffer;
+    }
+
+    argsToBuffer() {
+      let size = 0;
+      const tChars = this.types.substring(1).split("");
+      tChars.forEach(t => { if (t==="i" || t==="f") size += 4; });
+      
+      const buffer = new ArrayBuffer(size);
+      const view = new DataView(buffer);
+      let offset = 0;
+      tChars.forEach((t, idx) => {
+        if (t === "i") { view.setInt32(offset, this.args[idx], false); offset += 4; }
+        else if (t === "f") { view.setFloat32(offset, this.args[idx], false); offset += 4; }
+      });
+      return new Uint8Array(buffer);
+    }
+  }
+
+  // --- Lógica de Controles Globales y Conectividad ---
+  let currentOctaveIdx = 3; 
+  let currentOctaveValue = 0; 
+
   const oscStatus = {
     enabled: false,
     linked: false,
     ip: "127.0.0.1",
-    port: 8000
+    port: 8000,
+    socket: null
+  };
+
+  const initWebSocket = () => {
+    if (oscStatus.socket) oscStatus.socket.close();
+    
+    // Asumimos un bridge en el puerto 8081 (común para websocket-osc bridges)
+    const wsUrl = `ws://${window.location.hostname || "localhost"}:8081`;
+    oscStatus.socket = new WebSocket(wsUrl);
+    oscStatus.socket.binaryType = "arraybuffer";
+
+    oscStatus.socket.onopen = () => {
+      oscStatus.linked = true;
+      updateStatusVisuals();
+      addEventLog("Vínculo Bridge Establecido (WS)", true);
+    };
+
+    oscStatus.socket.onclose = () => {
+      oscStatus.linked = false;
+      updateStatusVisuals();
+      addEventLog("Vínculo Bridge Perdido", true);
+      // Reintento en 5s
+      setTimeout(initWebSocket, 5000);
+    };
+  };
+
+  // Inicializar conectividad
+  initWebSocket();
+
+  const dispatchOSC = (address, types, args) => {
+    // 1. Mostrar en Monitor (Visual)
+    const visualArgs = args.map(a => typeof a === "number" ? a.toFixed(2) : a).join(", ");
+    addEventLog(`[${address}, ${visualArgs}]`);
+
+    // 2. Enviar Binario si está habilitado
+    if (oscStatus.enabled && oscStatus.linked && oscStatus.socket.readyState === WebSocket.OPEN) {
+      const msg = new OSCMessage(address, types, args);
+      const packet = msg.encode();
+      
+      // El bridge necesita saber a qué IP/Port UDP mandar el paquete OSC
+      // Mandamos un objeto con el target y el blob binario
+      const bridgeData = {
+        host: oscStatus.ip,
+        port: oscStatus.port,
+        data: new Uint8Array(packet)
+      };
+      
+      // Algunos bridges aceptan directamente el buffer OSC, 
+      // pero otros necesitan metadata. Implementamos el estándar de metadatos:
+      oscStatus.socket.send(JSON.stringify({
+        type: "osc",
+        ip: oscStatus.ip,
+        port: oscStatus.port,
+        message: Array.from(new Uint8Array(packet))
+      }));
+    }
   };
 
   const updateStatusVisuals = () => {
-    // LED SEND
     const ledSend = document.getElementById("osc-led-send");
-    if (ledSend) {
-      ledSend.className = oscStatus.enabled ? "led-green" : "led-red";
-    }
-    
-    // LED LINK
+    if (ledSend) ledSend.className = oscStatus.enabled ? "led-green" : "led-red";
     const ledLink = document.getElementById("osc-led-link");
-    if (ledLink) {
-      ledLink.className = oscStatus.linked ? "led-green" : "led-red";
-    }
+    if (ledLink) ledLink.className = oscStatus.linked ? "led-green" : "led-red";
   };
 
-  // Exponer setter global para que un bridge (WebSocket) pueda actualizar el estado de LINK
   window.setOscLinked = (state) => {
     oscStatus.linked = !!state;
     updateStatusVisuals();
-    addEventLog(oscStatus.linked ? "Vínculo OSC Establecido" : "Vínculo OSC Perdido", true);
   };
 
-  // Listeners de configuración OSC
-  document.getElementById("osc-ip")?.addEventListener("input", (e) => {
-    oscStatus.ip = e.target.value;
-  });
-
-  document.getElementById("osc-port")?.addEventListener("input", (e) => {
-    oscStatus.port = parseInt(e.target.value) || 0;
-  });
-
+  // Listeners
+  document.getElementById("osc-ip")?.addEventListener("input", (e) => oscStatus.ip = e.target.value);
+  document.getElementById("osc-port")?.addEventListener("input", (e) => oscStatus.port = parseInt(e.target.value) || 0);
   document.getElementById("osc-toggle")?.addEventListener("change", (e) => {
     oscStatus.enabled = e.target.checked;
     updateStatusVisuals();
@@ -134,44 +220,37 @@ document.addEventListener("DOMContentLoaded", () => {
       currentOctaveValue = val;
       const displayEl = document.getElementById("oct-display");
       if (displayEl) displayEl.textContent = val > 0 ? `+${val}` : val;
-      addEventLog(`[${addr}, ${val}]`);
+      dispatchOSC(addr, "i", [val]);
     }
   };
 
   const sendPanic = (cmd) => {
-    addEventLog(`${cmd}`);
+    dispatchOSC(cmd, "", []);
   };
 
-  // Bind Control Events
   document.getElementById("oct-down")?.addEventListener("click", () => updateOctave(-1));
   document.getElementById("oct-up")?.addEventListener("click", () => updateOctave(1));
   document.getElementById("panic-notes")?.addEventListener("click", () => sendPanic(panicCommands[0]));
   document.getElementById("panic-sound")?.addEventListener("click", () => sendPanic(panicCommands[1]));
   
   const handleNoteOn = (baseId, el) => {
-    // Calculamos el ID Real sumando el offset global
     const realId = baseId + (currentOctaveValue * 41);
-    
     if (activeNotes.has(realId)) return;
     el.classList.add('active');
-    
-    // Guardamos el realId en el elemento para que NoteOff apague el correcto
     el.dataset.activeId = realId;
-    
     activeNotes.add(realId);
-    addEventLog(`[/mnote, ${realId.toFixed(1)}, 127]`);
+    dispatchOSC("/mnote", "fi", [realId, 127]);
   };
 
   const handleNoteOff = (el) => {
     const activeId = parseInt(el.dataset.activeId);
     if (isNaN(activeId) || !activeNotes.has(activeId)) return;
-    
-    addEventLog(`[/mnote, ${activeId.toFixed(1)}, 0]`);
+    dispatchOSC("/mnote", "fi", [activeId, 0]);
     el.classList.remove('active');
-    
     activeNotes.delete(activeId);
     delete el.dataset.activeId;
   };
+
 
   // --- Mapeo de Control QWERTY (Pruebas) ---
   const qwertyMap = { 'a': 0, 's': 1, 'd': 2, 'f': 3, 'g': 4, 'h': 5, 'j': 6, 'k': 7, 'l': 8 };

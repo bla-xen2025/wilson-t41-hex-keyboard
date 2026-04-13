@@ -1,0 +1,12 @@
+{
+  "name": "wilson-t41-bridge",
+  "version": "1.0.0",
+  "description": "Bridge WebSocket to UDP for Wilson T41 Keyboard",
+  "main": "bridge.js",
+  "scripts": {
+    "start": "node bridge.js"
+  },
+  "dependencies": {
+    "ws": "^8.16.0"
+  }
+}
