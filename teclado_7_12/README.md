@@ -16,12 +16,28 @@ Este teclado está preparado para controlar sintetizadores externos (SuperCollid
 Es necesario tener instalado [Node.js](https://nodejs.org/) en la computadora para ejecutar el puente de comunicación.
 
 ### Cómo conectar el teclado
-1. **Ejecutar el Puente:** En Windows, haz doble clic en el archivo `RUN_BRIDGE.bat`. 
-   - La primera vez se instalarán automáticamente las librerías necesarias.
-   - Verás un mensaje que dice: `Status: Escuchando teclado en ws://localhost:8081`.
-2. **Abrir el Teclado:** Abre `index.html` en tu navegador.
-3. **Verificar Vínculo:** Verás que el indicador **LINK** en la pantalla del teclado se pone verde.
-4. **Habilitar Envío:** Activa el switch **OSC**. El indicador **SEND** se pondrá verde y las teclas empezarán a enviar paquetes binarios.
+
+#### En Windows
+1. Haz doble clic en el archivo `RUN_BRIDGE.bat`. 
+
+#### En macOS
+1. Abre una Terminal en la carpeta del proyecto.
+2. Otorga permisos de ejecución al script (esto solo se hace **una vez**):
+   ```bash
+   chmod +x run_bridge_mac.sh
+   ```
+3. Ejecuta el archivo:
+   ```bash
+   ./run_bridge_mac.sh
+   ```
+
+> [!NOTE]
+> **¿Qué es `chmod +x`?** En sistemas macOS/Linux, por seguridad, los archivos no son ejecutables por defecto. Este comando le dice al sistema que el archivo es un script y tiene permiso para "correr".
+
+4. **Resultado:** En ambos sistemas, la primera vez se instalarán automáticamente las librerías necesarias. Verás un mensaje que dice: `Status: Escuchando teclado en ws://localhost:8081`.
+5. **Abrir el Teclado:** Abre `index.html` en tu navegador.
+6. **Verificar Vínculo:** Verás que el indicador **LINK** en la interfaz se pone verde.
+7. **Habilitar Envío:** Activa el switch **OSC**. El indicador **SEND** se pondrá verde y las teclas empezarán a enviar paquetes binarios.
 
 ### Configuración de Destino
 Desde la interfaz del teclado puedes configurar la **IP** (ej: `127.0.0.1`) y el **Puerto** (ej: `8000`) de tu sintetizador. El puente redirigirá los mensajes automáticamente sin necesidad de reiniciarlo.
