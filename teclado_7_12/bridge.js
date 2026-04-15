@@ -1,23 +1,87 @@
 const WebSocket = require('ws');
 const dgram = require('dgram');
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
 
-// Cliente UDP para enviar paquetes a SuperCollider / Max / Surge
+// --- Configuración ---
+const HTTP_PORT = 3000;
+const WS_PORT = 8081;
+
+// --- Utilidad para obtener la IP local ---
+function getLocalIP() {
+    const interfaces = os.networkInterfaces();
+    for (const name of Object.keys(interfaces)) {
+        for (const iface of interfaces[name]) {
+            if (iface.family === 'IPv4' && !iface.internal) {
+                return iface.address;
+            }
+        }
+    }
+    return 'localhost';
+}
+
+const LOCAL_IP = getLocalIP();
+
+// --- Servidor HTTP (Para que el iPad pueda cargar el teclado) ---
+const server = http.createServer((req, res) => {
+    let filePath = '.' + req.url;
+    if (filePath === './') filePath = './index.html';
+
+    const extname = String(path.extname(filePath)).toLowerCase();
+    const mimeTypes = {
+        '.html': 'text/html',
+        '.js': 'text/javascript',
+        '.css': 'text/css',
+        '.json': 'application/json',
+        '.png': 'image/png',
+        '.jpg': 'image/jpg',
+        '.gif': 'image/gif',
+    };
+
+    const contentType = mimeTypes[extname] || 'application/octet-stream';
+
+    fs.readFile(filePath, (error, content) => {
+        if (error) {
+            if (error.code == 'ENOENT') {
+                res.writeHead(404);
+                res.end('File not found');
+            } else {
+                res.writeHead(500);
+                res.end('Server error: ' + error.code);
+            }
+        } else {
+            res.writeHead(200, { 'Content-Type': contentType });
+            res.end(content, 'utf-8');
+        }
+    });
+});
+
+server.listen(HTTP_PORT, '0.0.0.0', () => {
+    console.log('=========================================');
+    console.log('   WILSON T41 - MASTER BRIDGE - v1.1    ');
+    console.log('=========================================');
+    console.log(`[HTTP] Interfaz: http://${LOCAL_IP}:${HTTP_PORT}`);
+    console.log(`[WS]   Puente:   ws://${LOCAL_IP}:${WS_PORT}`);
+    console.log('-----------------------------------------');
+    console.log('Instrucciones para iPad:');
+    console.log(`1. Conectá el iPad a la misma red Wi-Fi.`);
+    console.log(`2. Abrí Safari e ingresá: http://${LOCAL_IP}:${HTTP_PORT}`);
+    console.log('=========================================');
+});
+
+// --- Cliente UDP para enviar paquetes a SuperCollider / Max / Surge ---
 const udpClient = dgram.createSocket('udp4');
 
-// Servidor WebSocket (El teclado se conecta aquí)
-const wss = new WebSocket.Server({ port: 8081 });
-
-console.log('=========================================');
-console.log('   WILSON T41 - OSC BRIDGE - v1.0       ');
-console.log('=========================================');
-console.log('Status: Escuchando teclado en ws://localhost:8081');
+// --- Servidor WebSocket (El teclado se conecta aquí) ---
+const wss = new WebSocket.Server({ port: WS_PORT });
 
 wss.on('connection', (ws) => {
     console.log('[BRIDGE] Teclado vinculado.');
 
     ws.on('message', (data) => {
         try {
-            // El teclado manda un JSON con la metadata (IP, Puerto) y el Buffer binario
             const msg = JSON.parse(data);
             
             if (msg.type === 'osc') {
@@ -44,3 +108,4 @@ udpClient.on('error', (err) => {
     console.log(`[UDP SERVER ERROR]:\n${err.stack}`);
     udpClient.close();
 });
+

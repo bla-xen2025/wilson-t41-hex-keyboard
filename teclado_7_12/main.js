@@ -384,16 +384,20 @@ document.addEventListener("DOMContentLoaded", () => {
   gridContainer.style.width = `${totalW}px`;
   gridContainer.style.height = `${totalH}px`;
 
+  // === PREVENIR COMPORTAMIENTOS DE NAVEGADOR EN IPAD ===
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  
+  // Prevenir bounce/scroll accidental en iPad al tocar hex\xe1gonos
+  document.addEventListener('touchmove', (e) => {
+    if (e.target.closest('.hex')) e.preventDefault();
+  }, { passive: false });
+
   // === AUTO-CENTRAR BLOQUE NARANJA ===
-  // Esperamos un instante a que el navegador procese el render y tenga medidas correctas:
   setTimeout(() => {
     const viewport = document.querySelector('.keyboard-viewport');
     if (viewport) {
-      // Calculamos d\xf3nde qued\xf3 el centro matem\xe1tico (el x=0, y=0 donde naci\xf3 el naranja)
       const targetX = -minX + padding + (W / 2);
       const targetY = -minY + padding + (H / 2);
-      
-      // Scrolleamos para colocar ese centro en el medio del dispositivo visible
       viewport.scrollLeft = targetX - (viewport.clientWidth / 2);
       viewport.scrollTop = targetY - (viewport.clientHeight / 2);
     }
