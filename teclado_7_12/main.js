@@ -58,6 +58,50 @@ document.addEventListener("DOMContentLoaded", () => {
   const MAX_LOG_ENTRIES = 10;
   const monitorEl = document.getElementById("monitor-content");
 
+  // --- ESTADO DE CONFIGURACIÓN Y ZOOM ---
+  let isConfigMode = true;
+  let zoomLevel = 1.0;
+  const MIN_ZOOM = 0.5;
+  const MAX_ZOOM = 2.0;
+
+  const modeToggle = document.getElementById("mode-toggle");
+  const modeLabel = document.getElementById("mode-label");
+  const zoomDisplay = document.getElementById("zoom-display");
+  const viewport = document.getElementById("keyboard-viewport");
+
+  const updateMode = () => {
+    isConfigMode = modeToggle.checked;
+    modeLabel.textContent = isConfigMode ? "EDIT" : "PLAY";
+    
+    if (isConfigMode) {
+      document.body.classList.remove("performance-mode");
+      addEventLog("Modo Configuración: Zoom y Scroll habilitado", true);
+    } else {
+      document.body.classList.add("performance-mode");
+      addEventLog("Modo Ejecución: Scroll bloqueado", true);
+      // Opcional: Centrar al entrar en Play
+      autoCenterOrange();
+    }
+  };
+
+  const updateZoom = (delta) => {
+    if (!isConfigMode) return;
+    
+    zoomLevel = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoomLevel + delta));
+    gridContainer.style.transform = `scale(${zoomLevel})`;
+    if (zoomDisplay) zoomDisplay.textContent = `${Math.round(zoomLevel * 100)}%`;
+    
+    // Ajustar el tamaño del contenedor para que el scroll funcione con el zoom
+    // Nota: El centrado autoCenterOrange podría necesitar recalibración si se usa zoom extremo
+  };
+
+  modeToggle?.addEventListener("change", updateMode);
+  document.getElementById("zoom-in")?.addEventListener("click", () => updateZoom(0.1));
+  document.getElementById("zoom-out")?.addEventListener("click", () => updateZoom(-0.1));
+
+  // Inicializar estado visual del modo
+  updateMode();
+
   const addEventLog = (msg, isSystem = false) => {
     let finalMsg = msg;
     if (!isSystem) {
@@ -234,6 +278,8 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("panic-sound")?.addEventListener("click", () => sendPanic(panicCommands[1]));
   
   const handleNoteOn = (baseId, el) => {
+    if (isConfigMode) return; // BLOQUEO EN MODO CONFIGURACIÓN
+    
     const realId = baseId + (currentOctaveValue * 41);
     if (activeNotes.has(realId)) return;
     el.classList.add('active');
@@ -393,13 +439,17 @@ document.addEventListener("DOMContentLoaded", () => {
   }, { passive: false });
 
   // === AUTO-CENTRAR BLOQUE NARANJA ===
-  setTimeout(() => {
+  const autoCenterOrange = () => {
     const viewport = document.querySelector('.keyboard-viewport');
     if (viewport) {
       const targetX = -minX + padding + (W / 2);
       const targetY = -minY + padding + (H / 2);
-      viewport.scrollLeft = targetX - (viewport.clientWidth / 2);
-      viewport.scrollTop = targetY - (viewport.clientHeight / 2);
+      
+      // En modo ejecución, aplicamos el scroll fijo
+      viewport.scrollLeft = (targetX * zoomLevel) - (viewport.clientWidth / 2);
+      viewport.scrollTop = (targetY * zoomLevel) - (viewport.clientHeight / 2);
     }
-  }, 100);
+  };
+
+  setTimeout(autoCenterOrange, 100);
 });

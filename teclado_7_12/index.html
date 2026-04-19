@@ -12,11 +12,33 @@
 </head>
 <body>
   <div class="app-container">
-    <header class="glass-panel header">
-      <h1>Wilson T41-7_12</h1>
-    </header>
-
     <div id="global-controls" class="glass-panel controls-panel">
+      <!-- MODO TOGGLE -->
+      <div class="control-section">
+        <span class="control-label">MODO</span>
+        <div class="mode-toggle-container">
+          <label class="switch-toggle mode-switch">
+            <input type="checkbox" id="mode-toggle" checked> <!-- Checked = Config Mode by default -->
+            <span class="slider-round"></span>
+          </label>
+          <span id="mode-label" class="mode-text">EDIT</span>
+        </div>
+      </div>
+      
+      <div class="control-divider"></div>
+
+      <!-- ZOOM CONTROLS -->
+      <div id="zoom-controls" class="control-section">
+        <span class="control-label">ZOOM</span>
+        <div class="zoom-buttons">
+          <button id="zoom-out" class="btn-ctrl">-</button>
+          <span id="zoom-display" class="zoom-display">100%</span>
+          <button id="zoom-in" class="btn-ctrl">+</button>
+        </div>
+      </div>
+
+      <div class="control-divider show-config-only"></div>
+
       <div class="control-section">
         <span class="control-label">OCTAVA</span>
         <div class="octave-controls">
@@ -25,16 +47,16 @@
           <button id="oct-up" class="btn-ctrl">+</button>
         </div>
       </div>
-      <div class="control-divider"></div>
-      <div class="control-section">
+      <div class="control-divider show-config-only"></div>
+      <div class="control-section show-config-only">
         <span class="control-label">PÁNICO</span>
         <div class="panic-controls">
           <button id="panic-notes" class="btn-ctrl btn-panic">NOTES OFF</button>
           <button id="panic-sound" class="btn-ctrl btn-panic">SOUND OFF</button>
         </div>
       </div>
-      <div class="control-divider"></div>
-      <div class="control-section osc-setup">
+      <div class="control-divider show-config-only"></div>
+      <div class="control-section osc-setup show-config-only">
         <div class="osc-input-group">
           <span class="osc-minilabel">IP</span>
           <input type="text" id="osc-ip" class="osc-input" value="127.0.0.1" spellcheck="false">
@@ -62,13 +84,12 @@
       </div>
     </div>
 
-    <main class="keyboard-viewport">
+    <main class="keyboard-viewport" id="keyboard-viewport">
       <div id="hex-grid" class="hex-grid"></div>
     </main>
     
     <!-- Monitor de Salida UI -->
     <div id="output-monitor" class="glass-panel monitor">
-      <h3>Salida OSC</h3>
       <div id="monitor-content" class="monitor-content">Esperando MIDI/OSC...</div>
     </div>
   </div>
