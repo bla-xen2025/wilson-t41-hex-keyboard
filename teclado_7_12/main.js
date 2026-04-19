@@ -53,54 +53,30 @@ document.addEventListener("DOMContentLoaded", () => {
   let allHexes = [];
 
   // Gestión de polifonía y monitor
+  const monitorEl = document.getElementById("monitor-content");
   const activeNotes = new Set();
   const eventLog = [];
   const MAX_LOG_ENTRIES = 10;
-  const monitorEl = document.getElementById("monitor-content");
-
-  // --- ESTADO DE CONFIGURACIÓN Y ZOOM ---
-  let isConfigMode = true;
-  let zoomLevel = 1.0;
-  const MIN_ZOOM = 0.5;
-  const MAX_ZOOM = 2.0;
-
-  const modeToggle = document.getElementById("mode-toggle");
-  const modeLabel = document.getElementById("mode-label");
-  const zoomDisplay = document.getElementById("zoom-display");
-  const viewport = document.getElementById("keyboard-viewport");
-
-  const updateMode = () => {
-    isConfigMode = modeToggle.checked;
-    modeLabel.textContent = isConfigMode ? "EDIT" : "PLAY";
-    
-    if (isConfigMode) {
-      document.body.classList.remove("performance-mode");
-      addEventLog("Modo Configuración: Zoom y Scroll habilitado", true);
-    } else {
-      document.body.classList.add("performance-mode");
-      addEventLog("Modo Ejecución: Scroll bloqueado", true);
-      // Opcional: Centrar al entrar en Play
-      autoCenterOrange();
+  
+  const updateMonitor = () => {
+    if (eventLog.length === 0) {
+      if (monitorEl) monitorEl.textContent = "Esperando MIDI/OSC...";
+      return;
     }
+    if (monitorEl) monitorEl.textContent = eventLog.join("\n");
   };
 
-  const updateZoom = (delta) => {
-    if (!isConfigMode) return;
-    
-    zoomLevel = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoomLevel + delta));
-    gridContainer.style.transform = `scale(${zoomLevel})`;
-    if (zoomDisplay) zoomDisplay.textContent = `${Math.round(zoomLevel * 100)}%`;
-    
-    // Ajustar el tamaño del contenedor para que el scroll funcione con el zoom
-    // Nota: El centrado autoCenterOrange podría necesitar recalibración si se usa zoom extremo
+  // --- Lógica de Controles Globales y Conectividad ---
+  let currentOctaveIdx = 3; 
+  let currentOctaveValue = 0; 
+
+  const oscStatus = {
+    enabled: false,
+    linked: false,
+    ip: "127.0.0.1",
+    port: 8000,
+    socket: null
   };
-
-  modeToggle?.addEventListener("change", updateMode);
-  document.getElementById("zoom-in")?.addEventListener("click", () => updateZoom(0.1));
-  document.getElementById("zoom-out")?.addEventListener("click", () => updateZoom(-0.1));
-
-  // Inicializar estado visual del modo
-  updateMode();
 
   const addEventLog = (msg, isSystem = false) => {
     let finalMsg = msg;
@@ -114,13 +90,58 @@ document.addEventListener("DOMContentLoaded", () => {
     updateMonitor();
   };
 
-  const updateMonitor = () => {
-    if (eventLog.length === 0) {
-      if (monitorEl) monitorEl.textContent = "Esperando MIDI/OSC...";
-      return;
+  // --- ESTADO DE CONFIGURACIÓN Y ZOOM ---
+  let isConfigMode = true;
+  let zoomLevel = 1.0;
+  const MIN_ZOOM = 0.5;
+  const MAX_ZOOM = 2.0;
+
+  const modeToggle = document.getElementById("mode-toggle");
+  const modeLabel = document.getElementById("mode-label");
+  const zoomDisplay = document.getElementById("zoom-display");
+  const viewport = document.getElementById("keyboard-viewport");
+
+  const autoCenterOrange = () => {
+    if (viewport) {
+      const targetX = -minX + padding + (W / 2);
+      const targetY = -minY + padding + (H / 2);
+      
+      viewport.scrollLeft = (targetX * zoomLevel) - (viewport.clientWidth / 2);
+      viewport.scrollTop = (targetY * zoomLevel) - (viewport.clientHeight / 2);
     }
-    if (monitorEl) monitorEl.textContent = eventLog.join("\n");
   };
+
+  const updateMode = () => {
+    isConfigMode = !!modeToggle?.checked;
+    if (modeLabel) modeLabel.textContent = isConfigMode ? "EDIT" : "PLAY";
+    
+    if (isConfigMode) {
+      document.body.classList.remove("performance-mode");
+      addEventLog("Modo Configuración: Zoom y Scroll habilitado", true);
+    } else {
+      document.body.classList.add("performance-mode");
+      addEventLog("Modo Ejecución: Scroll bloqueado", true);
+      // Ya no llamamos a autoCenterOrange() aquí para no perder el ajuste manual del usuario
+    }
+  };
+
+  const updateZoom = (delta) => {
+    if (!isConfigMode) return;
+    zoomLevel = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoomLevel + delta));
+    gridContainer.style.transform = `scale(${zoomLevel})`;
+    if (zoomDisplay) zoomDisplay.textContent = `${Math.round(zoomLevel * 100)}%`;
+  };
+
+  modeToggle?.addEventListener("change", updateMode);
+  document.getElementById("zoom-in")?.addEventListener("click", () => updateZoom(0.1));
+  document.getElementById("zoom-out")?.addEventListener("click", () => updateZoom(-0.1));
+
+  // Inicializar estado visual del modo pero NO ejecutar centrado aún (minX es Infinity)
+  if (modeToggle) {
+    isConfigMode = modeToggle.checked;
+    modeLabel.textContent = isConfigMode ? "EDIT" : "PLAY";
+    if (!isConfigMode) document.body.classList.add("performance-mode");
+  }
 
   // --- Lógica de Codificación Binaria OSC 1.0 ---
   class OSCMessage {
@@ -168,17 +189,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // --- Lógica de Controles Globales y Conectividad ---
-  let currentOctaveIdx = 3; 
-  let currentOctaveValue = 0; 
-
-  const oscStatus = {
-    enabled: false,
-    linked: false,
-    ip: "127.0.0.1",
-    port: 8000,
-    socket: null
-  };
 
   const initWebSocket = () => {
     if (oscStatus.socket) oscStatus.socket.close();
@@ -438,18 +448,5 @@ document.addEventListener("DOMContentLoaded", () => {
     if (e.target.closest('.hex')) e.preventDefault();
   }, { passive: false });
 
-  // === AUTO-CENTRAR BLOQUE NARANJA ===
-  const autoCenterOrange = () => {
-    const viewport = document.querySelector('.keyboard-viewport');
-    if (viewport) {
-      const targetX = -minX + padding + (W / 2);
-      const targetY = -minY + padding + (H / 2);
-      
-      // En modo ejecución, aplicamos el scroll fijo
-      viewport.scrollLeft = (targetX * zoomLevel) - (viewport.clientWidth / 2);
-      viewport.scrollTop = (targetY * zoomLevel) - (viewport.clientHeight / 2);
-    }
-  };
-
-  setTimeout(autoCenterOrange, 100);
+  setTimeout(autoCenterOrange, 200);
 });
