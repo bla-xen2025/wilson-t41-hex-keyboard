@@ -229,13 +229,16 @@ document.addEventListener("DOMContentLoaded", () => {
   initWebSocket();
 
   const dispatchOSC = (address, types, args) => {
-    // 1. Mostrar en Monitor (Visual)
-    const visualArgs = args.map(a => typeof a === "number" ? a.toFixed(2) : a).join(", ");
+    // Forzamos que cualquier tipo 'i' (integer) sea tratado como 'f' (float) para consistencia
+    const forcedTypes = types.replace(/i/g, "f");
+
+    // 1. Mostrar en Monitor (Visual) - Formato 1.0 como pidió el usuario
+    const visualArgs = args.map(a => typeof a === "number" ? a.toFixed(1) : a).join(", ");
     addEventLog(`[${address}, ${visualArgs}]`);
 
     // 2. Enviar Binario si está habilitado
     if (oscStatus.enabled && oscStatus.linked && oscStatus.socket.readyState === WebSocket.OPEN) {
-      const msg = new OSCMessage(address, types, args);
+      const msg = new OSCMessage(address, forcedTypes, args);
       const packet = msg.encode();
       
       // El bridge necesita saber a qué IP/Port UDP mandar el paquete OSC
@@ -285,8 +288,11 @@ document.addEventListener("DOMContentLoaded", () => {
       const [addr, val] = transpositionArray[currentOctaveIdx];
       currentOctaveValue = val;
       const displayEl = document.getElementById("oct-display");
-      if (displayEl) displayEl.textContent = val > 0 ? `+${val}` : val;
-      dispatchOSC(addr, "i", [val]);
+      if (displayEl) {
+        const formattedVal = val.toFixed(1);
+        displayEl.textContent = val > 0 ? `+${formattedVal}` : formattedVal;
+      }
+      dispatchOSC(addr, "f", [val]);
     }
   };
 
@@ -309,13 +315,13 @@ document.addEventListener("DOMContentLoaded", () => {
     el.classList.add('active');
     el.dataset.activeId = realId;
     activeNotes.add(realId);
-    dispatchOSC("/mnote", "fi", [realId, 127]);
+    dispatchOSC("/mnote", "ff", [realId, 127]);
   };
 
   const handleNoteOff = (el) => {
     const activeId = parseInt(el.dataset.activeId);
     if (isNaN(activeId) || !activeNotes.has(activeId)) return;
-    dispatchOSC("/mnote", "fi", [activeId, 0]);
+    dispatchOSC("/mnote", "ff", [activeId, 0]);
     el.classList.remove('active');
     activeNotes.delete(activeId);
     delete el.dataset.activeId;
