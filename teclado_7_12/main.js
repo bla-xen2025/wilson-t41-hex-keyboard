@@ -93,13 +93,16 @@ document.addEventListener("DOMContentLoaded", () => {
   // --- ESTADO DE CONFIGURACIÓN Y ZOOM ---
   let isConfigMode = true;
   let zoomLevel = 1.0;
+  let uiZoomLevel = 1.0;
   const MIN_ZOOM = 0.5;
   const MAX_ZOOM = 2.0;
 
   const modeToggle = document.getElementById("mode-toggle");
   const modeLabel = document.getElementById("mode-label");
   const zoomDisplay = document.getElementById("zoom-display");
+  const uiZoomDisplay = document.getElementById("ui-zoom-display");
   const viewport = document.getElementById("keyboard-viewport");
+  const controlsPanel = document.getElementById("global-controls");
 
   const autoCenterOrange = () => {
     if (viewport) {
@@ -132,9 +135,18 @@ document.addEventListener("DOMContentLoaded", () => {
     if (zoomDisplay) zoomDisplay.textContent = `${Math.round(zoomLevel * 100)}%`;
   };
 
+  const updateUIZoom = (delta) => {
+    if (!isConfigMode) return;
+    uiZoomLevel = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, uiZoomLevel + delta));
+    if (controlsPanel) controlsPanel.style.setProperty('--ui-scale', uiZoomLevel);
+    if (uiZoomDisplay) uiZoomDisplay.textContent = `${Math.round(uiZoomLevel * 100)}%`;
+  };
+
   modeToggle?.addEventListener("change", updateMode);
   document.getElementById("zoom-in")?.addEventListener("click", () => updateZoom(0.1));
   document.getElementById("zoom-out")?.addEventListener("click", () => updateZoom(-0.1));
+  document.getElementById("ui-zoom-in")?.addEventListener("click", () => updateUIZoom(0.1));
+  document.getElementById("ui-zoom-out")?.addEventListener("click", () => updateUIZoom(-0.1));
 
   // Inicializar estado visual del modo pero NO ejecutar centrado aún (minX es Infinity)
   if (modeToggle) {
@@ -290,7 +302,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const handleNoteOn = (baseId, el) => {
     if (isConfigMode) return; // BLOQUEO EN MODO CONFIGURACIÓN
     
-    const realId = baseId + (currentOctaveValue * 41);
+    // El usuario maneja la octava externamente. 
+    // El dato de nota enviado es fijo (el ID base del layout).
+    const realId = baseId;
     if (activeNotes.has(realId)) return;
     el.classList.add('active');
     el.dataset.activeId = realId;
