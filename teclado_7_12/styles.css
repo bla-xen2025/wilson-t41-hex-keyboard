@@ -484,3 +484,127 @@ input:checked + .slider-round:before {
   50% { opacity: 0.7; transform: scale(1.15); }
   100% { opacity: 1; transform: scale(1); }
 }
+
+/* ================================
+   COMPOSITION TOOLS PANEL
+=================================== */
+.comp-panel {
+  position: fixed;
+  top: 100px;
+  right: -400px; /* Hidden by default */
+  width: 320px;
+  background: rgba(15, 23, 42, 0.9);
+  border-left: 2px solid #60a5fa;
+  border-top: 2px solid #60a5fa;
+  border-bottom: 2px solid #60a5fa;
+  border-radius: 8px 0 0 8px;
+  backdrop-filter: blur(12px);
+  box-shadow: -5px 5px 25px rgba(0,0,0,0.5);
+  z-index: 150;
+  transition: right 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  display: flex;
+  flex-direction: column;
+}
+
+.comp-panel.active {
+  right: 0;
+}
+
+.comp-header {
+  padding: 1rem;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.comp-header h3 {
+  font-size: 1rem;
+  color: #fbbf24;
+  letter-spacing: 1px;
+}
+
+.comp-content {
+  padding: 1rem;
+  overflow-y: auto;
+  max-height: calc(100vh - 200px);
+}
+
+.comp-section {
+  margin-bottom: 1.5rem;
+  background: rgba(0,0,0,0.2);
+  padding: 1rem;
+  border-radius: 6px;
+}
+
+.comp-section h4 {
+  font-size: 0.85rem;
+  color: #e2e8f0;
+  margin-bottom: 0.8rem;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  padding-bottom: 0.4rem;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 0.8rem;
+}
+
+.input-group label {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
+.comp-input {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 4px;
+  padding: 0.5rem;
+  color: var(--text-primary);
+  font-family: monospace;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.comp-input:focus {
+  border-color: #60a5fa;
+}
+
+.btn-calc {
+  width: 100%;
+  border-radius: 4px;
+  height: 36px;
+  background: rgba(96, 165, 250, 0.2);
+  color: #60a5fa;
+  border: 1px solid rgba(96, 165, 250, 0.4);
+}
+
+.btn-calc:hover {
+  background: rgba(96, 165, 250, 0.4);
+}
+
+.result-box {
+  margin-top: 1rem;
+  padding: 0.8rem;
+  background: rgba(0,0,0,0.3);
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+#set-result {
+  color: #fbbf24;
+  font-weight: 700;
+  font-family: monospace;
+}
+
+.coming-soon {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+#comp-tools-toggle.active {
+  background: rgba(96, 165, 250, 0.3);
+  color: #60a5fa;
+  border-color: #60a5fa;
+}

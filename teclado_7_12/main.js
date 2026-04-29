@@ -407,15 +407,15 @@ document.addEventListener("DOMContentLoaded", () => {
         
         // Touch Events (Polifonía real en tablets/pantallas táctiles)
         hex.addEventListener('touchstart', (e) => { 
-          e.preventDefault(); 
+          if (!isConfigMode) e.preventDefault(); 
           handleNoteOn(mappedId, hex); 
         });
         hex.addEventListener('touchend', (e) => { 
-          e.preventDefault(); 
+          if (!isConfigMode) e.preventDefault(); 
           handleNoteOff(hex); 
         });
         hex.addEventListener('touchcancel', (e) => { 
-          e.preventDefault(); 
+          if (!isConfigMode) e.preventDefault(); 
           handleNoteOff(hex); 
         });
         
@@ -463,9 +463,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // === PREVENIR COMPORTAMIENTOS DE NAVEGADOR EN IPAD ===
   document.addEventListener('contextmenu', e => e.preventDefault());
   
-  // Prevenir bounce/scroll accidental en iPad al tocar hex\xe1gonos
+  // Prevenir bounce/scroll accidental en iPad al tocar hexágonos
   document.addEventListener('touchmove', (e) => {
-    if (e.target.closest('.hex')) e.preventDefault();
+    if (!isConfigMode && e.target.closest('.hex')) e.preventDefault();
   }, { passive: false });
 
   setTimeout(autoCenterOrange, 200);
